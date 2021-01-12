@@ -3,11 +3,12 @@ import sys
 
 from main_ui import Ui_Form
 from PyQt5.QtWidgets import *
+from PyQt5 import QtCore
 import socket
 import os
 import time
 
-IP = "172.20.47.75"
+IP = "192.168.1.9"
 PORT = 80
 
 
@@ -42,6 +43,11 @@ class MainWindow(QWidget, Ui_Form):
         self.stop2.clicked.connect(self.stop2engine)
         self.stop3.clicked.connect(self.stop3engine)
 
+        self.checkThreadTimer = QtCore.QTimer(self)
+        self.checkThreadTimer.setInterval(1000)  # .5 seconds
+        self.checkThreadTimer.start()
+        self.checkThreadTimer.timeout.connect(self.pingDrone)
+
     def updateTemperature(self):
         print(self.sendMessage("update_temperature"))
 
@@ -51,14 +57,14 @@ class MainWindow(QWidget, Ui_Form):
     def updatePressure(self):
         print(self.sendMessage("update_pressure"))
 
-
     def updateHumidity(self):
         print(self.sendMessage("update_humidity"))
 
-
     def checkConnection(self):
-        ret = os.system(f"ping -o -c 1 -W {PORT} {IP}")
-        return ret == 0
+        """print(f"ping -n 3 -w {PORT} {IP}")
+        ret = os.system(f"ping -n 3 -w {PORT} {IP}")
+        return ret == 0"""
+        return True
 
     def sendMessage(self, message):
         if not self.checkConnection():
@@ -66,10 +72,13 @@ class MainWindow(QWidget, Ui_Form):
             return None
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((IP, PORT))
-            sock.send(message.encode("utf-8"))
-            data = sock.recv(1024)
-            if data is None:
+            sock.settimeout(1)
+
+            try:
+                sock.connect((IP, PORT))
+                sock.send(message.encode("utf-8"))
+                data = sock.recv(1024)
+            except socket.timeout:
                 QMessageBox.warning(self, "Error", "Couldn't connect to drone.")
                 return None
             data = list(map(lambda x: x.split("="), data.decode("utf-8").split(";")))[:-1]
@@ -78,6 +87,7 @@ class MainWindow(QWidget, Ui_Form):
             return data
         except Exception as e:
             QMessageBox.warning(self, type(e).__name__, str(e))
+            print(type(e).__name__, str(e))
 
     def updateValues(self, json):
         time = str(datetime.datetime.now().strftime("%H:%M:%S"))
@@ -100,7 +110,6 @@ class MainWindow(QWidget, Ui_Form):
         if "altitude" in json:
             self.altitude_status.setText(json["altitude"] + "m")
             self.altitude_upd_time.setText(time)
-
 
     def enableLights(self):
         print(self.sendMessage("enable_lights"))
