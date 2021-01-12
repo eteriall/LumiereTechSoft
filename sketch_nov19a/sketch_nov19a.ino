@@ -14,8 +14,8 @@
 
 Adafruit_BME280 bme;          
 
-const char* ssid = "23";
-const char* password =  "";
+const char* ssid = "sweet home";
+const char* password =  "05051979";
 
 bool lights_are_on = 1;
 bool trackers_are_on = 0;
