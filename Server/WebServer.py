@@ -17,6 +17,10 @@ socketio = SocketIO(app, cors_allowed_origins='*')
 def handleMessage(msg):
     send(msg, broadcast=True)
 
+@socketio.on('connect')
+def handle_connection():
+    send(list(reversed(logs)), broadcast=True)
+
 
 MAC_ADRESSES = ["48:3F:DA:7D:FB:6F"]
 errors = []
@@ -112,10 +116,10 @@ def logs_viewer_handler():
 @app.route('/log_message', methods=["GET"])
 def logging_handler():
     args = dict(request.args)
-    socketio.emit('message', str({"text": args["message"], "time": get_timestamp()}), broadcast=True)
 
     if "message" in args:
         logs.append({"text": args["message"], "time": get_timestamp()})
+        socketio.emit('message', list(reversed(logs)), broadcast=True)
         return "logged"
     else:
         return "wrong parameters"

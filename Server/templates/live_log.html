@@ -1,25 +1,81 @@
 <html>
 <head>
-<title>Live Log</title>
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.8/socket.io.min.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <title>Live Log</title>
+    <script type="text/javascript"
+            src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.8/socket.io.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
 </head>
+<style>.rectangle {
+counter-reset: li;
+list-style: none;
+font: 14px "Trebuchet MS", "Lucida Sans";
+padding: 0;
+text-shadow: 0 1px 0 rgba(255,255,255,.5);
+}
+.rectangle p {
+position: relative;
+display: block;
+padding: .4em .4em .4em .8em;
+margin: .5em 0 .5em 2.5em;
+background: #D3D4DA;
+color: #444;
+text-decoration: none;
+transition: all .3s ease-out;
+}
+.rectangle p:hover {background: #DCDDE1;}
+.rectangle p:before {
+content: counter(li);
+counter-increment: li;
+position: absolute;
+left: -2.5em;
+top: 50%;
+margin-top: -1em;
+background: #9097A2;
+height: 2em;
+width: 2em;
+line-height: 2em;
+text-align: center;
+font-weight: bold;
+}
+.rectangle p:after {
+position: absolute;
+content: "";
+border: .5em solid transparent;
+left: -1em;
+top: 50%;
+margin-top: -.5em;
+transition: all .3s ease-out;
+}
+.rectangle p:hover:after {
+left: -.5em;
+border-left-color: #9097A2;
+}
+</style>
 <body>
 <script type="text/javascript">
 $(document).ready(function() {
 
 	var socket = io.connect('http://127.0.0.1:8090');
 
-	socket.on('connect', function() {
-		socket.send('Log viewer connected.');
-	});
+
 
 	socket.on('message', function(msg) {
-		$("#messages").append('<li>'+msg+'</li>');
+	    var ol = document.getElementById("logs");
+        ol.innerHTML = '';
+        msg.forEach(function(entry) {
+            var li = document.createElement("li");
+            var p = document.createElement("p");
+            var new_li = entry["time"] + " " + entry["text"];
+            p.innerHTML = new_li;
+            li.appendChild(p);
+            ol.appendChild(li);
+        });
+
 	});
 
 });
+
 </script>
-<ul id="messages"></ul>
+<ol class="rectangle" id="logs"></ol>
 </body>
 </html>
