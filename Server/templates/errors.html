@@ -1,0 +1,15 @@
+<html>
+  <head>
+    {% if title %}
+    <title>{{title}} - Errors</title>
+    {% else %}
+    <title>Errors</title>
+    {% endif %}
+  </head>
+  <body>
+
+    {% for error in errors %}
+    <p style="color:red">{{error.time}}: <b>{{error.text}}</b></p>
+    {% endfor %}
+  </body>
+</html>

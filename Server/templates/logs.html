@@ -1,0 +1,15 @@
+<html>
+  <head>
+    {% if title %}
+    <title>{{title}} - Errors</title>
+    {% else %}
+    <title>Errors</title>
+    {% endif %}
+  </head>
+  <body>
+   <div id="results">    This text will change     </div>
+    {% for error in errors %}
+    <p>{{error.time}}: <b style="color:green;">{{error.text}}</b></p>
+    {% endfor %}
+  </body>
+</html>
