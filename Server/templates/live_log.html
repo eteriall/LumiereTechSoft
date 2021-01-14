@@ -5,7 +5,25 @@
             src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.8/socket.io.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
 </head>
-<style>.rectangle {
+<style>
+ol {
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+li {
+    flex: 0 0 auto;
+}
+li {
+  background: white;
+  transition: background-color 0.2s ease;
+}
+
+p.flash {
+  color: white !important;
+}
+
+.rectangle {
 counter-reset: li;
 list-style: none;
 font: 14px "Trebuchet MS", "Lucida Sans";
@@ -50,26 +68,35 @@ transition: all .3s ease-out;
 left: -.5em;
 border-left-color: #9097A2;
 }
+
 </style>
 <body>
 <script type="text/javascript">
 $(document).ready(function() {
 
-	var socket = io.connect('http://127.0.0.1:8090');
-
-
+	var socket = io.connect('192.168.1.3:8090');
 
 	socket.on('message', function(msg) {
 	    var ol = document.getElementById("logs");
         ol.innerHTML = '';
+        let last_p = null;
         msg.forEach(function(entry) {
             var li = document.createElement("li");
             var p = document.createElement("p");
             var new_li = entry["time"] + " " + entry["text"];
             p.innerHTML = new_li;
+            last_p = p;
             li.appendChild(p);
             ol.appendChild(li);
         });
+        if(last_p != null){
+            last_p.classList.add('flash');
+            setTimeout(function(){
+                last_p.classList.remove('flash');
+            }, 500);
+        }
+
+
 
 	});
 

@@ -1,3 +1,4 @@
+import copy
 import datetime
 import time
 
@@ -8,18 +9,22 @@ import socket
 import secrets
 import string
 
+HOST = socket.gethostbyname(socket.gethostname())
+PORT = 8090
+
 app = Flask(__name__)
 drones = {}
 socketio = SocketIO(app, cors_allowed_origins='*')
 
 
 @socketio.on('message')
-def handleMessage(msg):
-    send(msg, broadcast=True)
+def handleMessage():
+    send(jsonyfied_logs(), broadcast=True)
+
 
 @socketio.on('connect')
-def handle_connection():
-    send(list(reversed(logs)), broadcast=True)
+def handle_user_logs_connection():
+    send(jsonyfied_logs(), broadcast=True)
 
 
 MAC_ADRESSES = ["48:3F:DA:7D:FB:6F"]
@@ -27,8 +32,54 @@ errors = []
 logs = []
 
 
+def send_socket_message(drone_mac_address, message):
+
+    try:
+        start = time.time()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((drones[drone_mac_address]["ip"], 80))
+        sock.send(message.encode("utf-8"))
+        data = sock.recv(2)
+
+        return True
+    except socket.timeout:
+        print(f"CAN'T CONNECT TO DRONE {drone_mac_address}")
+    except ConnectionRefusedError:
+        print(f"DRONE REFUSED CONNECTION {drone_mac_address} ")
+    return False
+
+
 def get_timestamp():
-    return datetime.datetime.now().strftime("%d.%m.%y %H:%M:%S")
+    return datetime.datetime.now()
+
+
+def jsonify_drone_data(drone):
+    drone_ = copy.deepcopy(drone)
+    drone_["last_ping_time"] = format_datetime(drone["last_ping_time"])
+    drone_["reconnect_time"] = format_datetime(drone["reconnect_time"])
+    return drone_
+
+
+def jsonyfied_drones():
+    return list(map(lambda x: jsonify_drone_data(x), drones))
+
+
+def jsonify_logs_data(log_msg):
+    log_msg_ = copy.deepcopy(log_msg)
+    log_msg_["time"] = format_datetime(log_msg_["time"])
+    return log_msg_
+
+
+def jsonyfied_logs():
+    return list(map(lambda x: jsonify_logs_data(x), logs))
+
+
+def format_datetime(dtm):
+    return dtm.strftime("%d.%m.%y %H:%M:%S")
+
+
+def deformat_datetime(string):
+    return datetime.datetime.strptime(string, "%d.%m.%y %H:%M:%S")
 
 
 def drone_mac_is_valid(mac):
@@ -50,20 +101,19 @@ def ping_handler():
     if "mac_address" not in args \
             or not drone_mac_is_valid(args["mac_address"]) \
             or args["mac_address"] not in drones:
-        print("unauthorised")
         return {"code": "400"}
 
     ip = str(request.remote_addr)
     mac = args["mac_address"]
 
     drones[mac]["ip"] = ip
-    drones[mac]["last_ping_time"] = datetime.datetime.now().strftime("%d.%m.%y %H:%M:%S")
+    drones[mac]["last_ping_time"] = datetime.datetime.now()
 
     return {'code': '200'}
 
 
 @app.route('/connect', methods=["GET"])
-def connect_handler():
+def connect_drone():
     args = dict(request.args)
     if "mac_address" not in args or not drone_mac_is_valid(args["mac_address"]):
         return {"code": "400"}
@@ -74,14 +124,35 @@ def connect_handler():
         drones[mac] = {"name": generate_nickname(), "ip": ip}
 
     drones[mac]["ip"] = ip
-    drones[mac]["mac_adress"] = args["mac_address"]
-    drones[mac]["reconnect_time"] = datetime.datetime.now().strftime("%d.%m.%y %H:%M:%S")
+    drones[mac]["mac_address"] = args["mac_address"]
+    drones[mac]["reconnect_time"] = datetime.datetime.now()
+    drones[mac]["last_ping_time"] = datetime.datetime.now()
+
     return "{'code': '200'}"
+
+
+@app.route('/command', methods=["GET"])
+def command_handler():
+    args = dict(request.args)
+    if "mac_address" not in args or args["mac_address"] not in drones:
+        return "Wrong MAC Address"
+    mac = args["mac_address"]
+    command = args["command"]
+    print(command)
+    completed = send_socket_message(mac, command)
+    return "Success" if completed else "Failed to send command"
 
 
 @app.route('/drones')
 def drones_viewer():
-    return str(drones)
+    current_time = get_timestamp()
+    for drone in drones:
+        send_socket_message(drone, "ping")
+    for drone_mac in drones:
+        drone = drones[drone_mac]
+        offline_time = current_time - drone["last_ping_time"]
+        drones[drone_mac]["offline_time"] = offline_time.seconds
+    return render_template("drone_list.html", drones=list(drones.values()))
 
 
 @app.route('/get_key')
@@ -95,7 +166,7 @@ def key_reciever():
 def error_report_handler():
     args = dict(request.args)
     if "message" in args:
-        errors.append({"text": args["message"], "time": get_timestamp()})
+        errors.append({"text": args["message"], "time": datetime.datetime.now()})
         return "reported"
     else:
         return "wrong parameters"
@@ -118,8 +189,8 @@ def logging_handler():
     args = dict(request.args)
 
     if "message" in args:
-        logs.append({"text": args["message"], "time": get_timestamp()})
-        socketio.emit('message', list(reversed(logs)), broadcast=True)
+        logs.append({"text": args["message"], "time": datetime.datetime.now()})
+        socketio.emit('message', jsonyfied_logs(), broadcast=True)
         return "logged"
     else:
         return "wrong parameters"
@@ -127,11 +198,10 @@ def logging_handler():
 
 @app.route('/live_log')
 def live_logging():
+    socketio.emit("message", jsonyfied_logs(), broadcast=True)
     return render_template("live_log.html")
 
 
-host = socket.gethostbyname(socket.gethostname())
-PORT = 8090
-print(f"http://{host}:{PORT}/drones")
+print(f"http://{HOST}:{PORT}/drones")
 socketio.run(app, host='0.0.0.0', port=PORT)
 app.run()

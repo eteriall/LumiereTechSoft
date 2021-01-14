@@ -2,16 +2,25 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
+#define  engine1_port D0
 
 String unique_key = "XtVT7Fy8jQ";
 String HOST = "http://192.168.1.3:8090";
 bool CONNECTED_TO_SERVER = false;
+bool engine1_is_on = false;
+WiFiServer wifiServer(80);
+WiFiClient client;
+String res = "";
+long timing = 0;
 
 void setup () {
 
   Serial.begin(115200);
   WiFi.begin("sweet home", "05051979");
+  pinMode(engine1_port, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
+  digitalWrite(LED_BUILTIN, LOW);
   while (WiFi.status() != WL_CONNECTED) {
 
     delay(1000);
@@ -19,7 +28,11 @@ void setup () {
 
   }
   Serial.println("Connected to WiFi Network");
-
+  connect();
+  check_connection();
+  Serial.println(WiFi.localIP());
+  digitalWrite(LED_BUILTIN, HIGH);
+  wifiServer.begin();
 }
 
 void log_message(String message){
@@ -100,7 +113,51 @@ void check_connection(){
 }
 
 void loop() {
-    connect();
-    check_connection();
-    delay(1000);
+    // Чтение информации из сокетов
+    if (!client.connected()) {
+        client = wifiServer.available();
+    } else {
+        if (client.available() > 0) {
+            res += char(client.read());
+        } else if (res != "") {
+            Serial.println(res);
+            if (res != "") {
+                client.write("ok");
+                Serial.println("{" + res + "}");
+                String to_send = "";
+
+                // Команды
+                if (res == "p") {
+                    check_connection();
+                    Serial.println("- Pinged");
+                } else if (res == "da") {
+                    engine1_is_on = false;
+                    Serial.println("- Disabled everything");
+                }
+                else if (res == "ea") {
+                    engine1_is_on = true;
+                    Serial.println("- Enabled everything");
+                res = "";
+
+                }
+            }
+
+            if(engine1_is_on){
+              digitalWrite(engine1_port, HIGH);
+            } else {
+              digitalWrite(engine1_port, LOW);
+           }
+           res = "";
+
+        }
+    }
+
+    if (millis() - timing > 3000){
+        // Ping каждые 3 секунды
+        timing = millis();
+        //check_connection();
+        //connect();
+    }
+
+
 }

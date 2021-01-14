@@ -5,7 +5,10 @@
   <body>
     {% for drone in drones %}
     <b>{{drone.mac_address}}</b>
-    <p>{{drone.last_ping_time}}: </p>
+    <p>{{drone.last_ping_time}}</p>
+    <p><a href={{"command?mac_address=" ~ drone.mac_address ~ "&command=ea"}}>Enable all</a></p>
+    <p><a href={{"command?mac_address=" ~ drone.mac_address ~ "&command=da"}}>Disable all</a></p>
+
     {% endfor %}
   </body>
 </html>
