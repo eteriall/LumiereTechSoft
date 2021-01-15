@@ -2,12 +2,14 @@ import copy
 import datetime
 import time
 
-from flask import Flask, render_template
+from flask import Flask, render_template, url_for
 from flask import request
 from flask_socketio import SocketIO, send
 import socket
 import secrets
 import string
+
+from flask import redirect
 
 HOST = socket.gethostbyname(socket.gethostname())
 PORT = 8090
@@ -33,7 +35,6 @@ logs = []
 
 
 def send_socket_message(drone_mac_address, message):
-
     try:
         start = time.time()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -138,9 +139,8 @@ def command_handler():
         return "Wrong MAC Address"
     mac = args["mac_address"]
     command = args["command"]
-    print(command)
     completed = send_socket_message(mac, command)
-    return "Success" if completed else "Failed to send command"
+    return redirect(url_for('drones')) if completed else "Failed to send command"
 
 
 @app.route('/drones')

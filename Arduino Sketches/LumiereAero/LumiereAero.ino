@@ -7,11 +7,66 @@
 String unique_key = "XtVT7Fy8jQ";
 String HOST = "http://192.168.1.3:8090";
 bool CONNECTED_TO_SERVER = false;
-bool engine1_is_on = false;
+bool built_in_led1_is_on = false;
+bool built_in_led2_is_on = false;
+bool autoPing = true;
+bool run_show = false;
+
 WiFiServer wifiServer(80);
 WiFiClient client;
+
+int show_size = 0;
+DynamicJsonDocument show_elements(102400);
+int next_show_elem_time = 0;
+int next_show_elem_index = 0;
+int show_start_time = 0;
+
 String res = "";
 long timing = 0;
+
+void next_show_elem(){
+    if (next_show_elem_index < show_size){
+        Serial.println(next_show_elem_index);
+        Serial.println(show_elements.containsKey(String(next_show_elem_index)));
+        DynamicJsonDocument show_elem = show_elements[String(next_show_elem_index)];
+        DynamicJsonDocument current_command = show_elem["cd"];
+
+        if (current_command.containsKey("b_led1")) {
+            if (current_command["b_led1"] == 1){
+                built_in_led1_is_on = false;
+                Serial.println("en1");
+            } else {
+                built_in_led1_is_on = true;
+                Serial.println("dn1");
+            }
+        }
+
+        if (current_command.containsKey("b_led2")) {
+            if (current_command["b_led2"] == 1){
+                built_in_led2_is_on = false;
+                Serial.println("en2");
+            } else {
+                built_in_led2_is_on = true;
+                Serial.println("dn2");
+            }
+        }
+        Serial.println("passed 1");
+        if(next_show_elem_index + 1 < show_size){
+            next_show_elem_index += 1;
+
+            // Расшифровка следующего элемента для получения времени события
+            next_show_elem_time = show_elements[String(next_show_elem_index)]["t"];
+            Serial.println(String(next_show_elem_time));
+            Serial.println("passed 2");
+            Serial.println(String(next_show_elem_time));
+        } else {
+            run_show = false;
+        }
+    } else {
+            run_show = false;
+    }
+
+}
 
 void setup () {
 
@@ -90,7 +145,20 @@ void connect(){
 
 void check_connection(){
     HTTPClient http;
-    http.begin(HOST + "/ping?mac_address=" + WiFi.macAddress());
+    String request = HOST + "/ping?mac_address=" + WiFi.macAddress();
+    if(run_show){
+        request += "&rs=1";
+    } else {
+        request += "&rs=0";
+    }
+    request += "&ss=" + String(show_size);
+    request += "&time=" + String(millis());
+    request += "&nei=" + String(next_show_elem_index);
+    request += "&net=" + String(next_show_elem_time);
+    request += "&stt=" + String(show_start_time);
+
+    http.begin(request);
+
     int httpCode = http.GET();
 
     if (httpCode > 0) {
@@ -113,6 +181,9 @@ void check_connection(){
 }
 
 void loop() {
+
+
+
     // Чтение информации из сокетов
     if (!client.connected()) {
         client = wifiServer.available();
@@ -122,42 +193,109 @@ void loop() {
         } else if (res != "") {
             Serial.println(res);
             if (res != "") {
+                Serial.println("r");
                 client.write("ok");
-                Serial.println("{" + res + "}");
-                String to_send = "";
+
+                DynamicJsonDocument doc(1024);
+                deserializeJson(doc, res);
+                Serial.println("r1");
 
                 // Команды
-                if (res == "p") {
-                    check_connection();
-                    Serial.println("- Pinged");
-                } else if (res == "da") {
-                    engine1_is_on = false;
-                    Serial.println("- Disabled everything");
+                if (doc.containsKey("mp")) {
+                    if (doc["mp"] == 1){
+                        Serial.println("MANUAL PING");
+                        autoPing = false;
+                    } else {
+                        autoPing = true;
+                        Serial.println("AUTO PING");
+                        Serial.println(millis());
+                        Serial.println(next_show_elem_time + show_start_time);
+                    }
                 }
-                else if (res == "ea") {
-                    engine1_is_on = true;
-                    Serial.println("- Enabled everything");
+                Serial.println("r2");
+                Serial.println(doc.containsKey("mp"));
+
+
+
+                // Загрузка шоу на аэростат
+                if (doc.containsKey("ss")) {
+                    show_size = doc["ss"];
+                    Serial.println("SETTED SHOW SIZE");
+                }
+                Serial.println("r3");
+                Serial.println(doc.containsKey("ss"));
+
+                if (doc.containsKey("se")) {
+                    int element_index = doc["ei"];
+                    DynamicJsonDocument new_show_element = doc["se"];
+                    show_elements[String(element_index)] = new_show_element;
+                    Serial.println(String(element_index));
+                }
+                Serial.println("r4");
+                Serial.println(doc.containsKey("se"));
+
+
+
+                if (doc.containsKey("rs")) {
+                  Serial.println("start");
+                    if(doc["rs"] == 1){
+                        Serial.println("START1");
+                        run_show = true;
+                        show_start_time = millis();
+                        next_show_elem_index = 0;
+                        next_show_elem_time = 0;
+                        Serial.println("START2");
+                    } else {
+                        run_show = false;
+                    }
+
+                }
+                Serial.println("r5");
+                Serial.println(doc.containsKey("rs"));
+
+                // Динамическое управление
+                if (doc.containsKey("b_led1")) {
+                    if (doc["b_led1"] == 1){
+                        built_in_led1_is_on = false;
+                    } else {
+                        built_in_led1_is_on = true;
+                    }
+                }
+
+                if (doc.containsKey("b_led2")) {
+                    if (doc["b_led2"] == 1){
+                        built_in_led2_is_on = false;
+                    } else {
+                        built_in_led2_is_on = true;
+                    }
+                }
                 res = "";
-
-                }
             }
-
-            if(engine1_is_on){
-              digitalWrite(engine1_port, HIGH);
-            } else {
-              digitalWrite(engine1_port, LOW);
-           }
-           res = "";
-
         }
     }
 
-    if (millis() - timing > 3000){
-        // Ping каждые 3 секунды
+    if (autoPing && (millis() - timing > 3000)){
         timing = millis();
-        //check_connection();
-        //connect();
+        check_connection();
+        connect();
+        Serial.println(millis());
+        Serial.println(next_show_elem_time + show_start_time);
     }
 
+    if (run_show && (millis() >= (next_show_elem_time + show_start_time))){
+        Serial.println("NEXT");
+        next_show_elem();
+    }
 
+   if(built_in_led1_is_on){
+      digitalWrite(LED_BUILTIN, LOW);
+    } else {
+      digitalWrite(LED_BUILTIN, HIGH);
+   }
+
+   if(built_in_led2_is_on){
+      digitalWrite(engine1_port, HIGH);
+    } else {
+      digitalWrite(engine1_port, LOW);
+   }
 }
