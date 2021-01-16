@@ -13,6 +13,22 @@ def exp_h(*args):
     sys.__excepthook__(*args)
 
 
+def color_lerp(current, goal, amount=50):
+    new = list(current[:])
+    for c1, c2, i in zip(current, goal, range(len(goal))):
+        if c1 > c2:
+            new[i] = max(c2, c1 - amount)
+        if c1 < c2:
+            new[i] = min(c2, c1 + amount)
+    return new
+
+
+color = (4, 33, 39)
+color2 = (4, 33, 39)
+tcolor = (4, 33, 39)
+tcolor2 = (4, 33, 39)
+
+
 def send_socket_message(ip, message):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((ip, 80))
@@ -56,7 +72,16 @@ while run:
         if ctime <= millis:
             send_socket_message("192.168.1.9", ctext)
             command_index += 1
+            params = json.loads(ctext)
+            if "b_led1" in params and params["b_led1"] == 1:
+                tcolor = (255, 255, 255)
+            if "b_led1" in params and params["b_led1"] == 0:
+                tcolor = (4, 33, 39)
 
+            if "b_led2" in params and params["b_led2"] == 1:
+                tcolor2 = (255, 255, 255)
+            if "b_led2" in params and params["b_led2"] == 0:
+                tcolor2 = (4, 33, 39)
     except IndexError:
         pass
 
@@ -64,5 +89,11 @@ while run:
         if event.type == pygame.QUIT:
             sys.exit()
 
-    gfxdraw.filled_circle(screen, SW // 2, SH // 2, 100, color)
+    color = color_lerp(color, tcolor)
+    color2 = color_lerp(color2, tcolor2)
+
+    gfxdraw.aacircle(screen, 160, SH // 2, 50, list(map(int, color)))
+    gfxdraw.aacircle(screen, 340, SH // 2, 50, list(map(int, color2)))
+    pygame.display.flip()
+    clock.tick(60)
     pygame.display.flip()

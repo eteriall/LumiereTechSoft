@@ -52,7 +52,6 @@ pygame.mixer.music.load(music)
 pygame.mixer.music.play(-1)
 start_time = time.time()
 
-"""send_socket_message("192.168.1.9", json.dumps({"m_ping": 1}))"""
 while run:
     screen.fill((0, 0, 0))
     events = pygame.event.get()
@@ -66,9 +65,9 @@ while run:
         if event.type == pygame.KEYDOWN or event.type == pygame.KEYUP:
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_q:
-                params["b_led1"] = 0
-            elif event.type == pygame.KEYUP and event.key == pygame.K_q:
                 params["b_led1"] = 1
+            elif event.type == pygame.KEYUP and event.key == pygame.K_q:
+                params["b_led1"] = 0
 
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_e:
                 params["b_led2"] = 1
@@ -89,9 +88,10 @@ while run:
         print(params)
         res += [(millis, json.dumps(params))]
         send_socket_message("192.168.1.9", json.dumps(params))
-    if "b_led1" in params and params["b_led1"] == 0:
-        tcolor = (255, 255, 255)
+
     if "b_led1" in params and params["b_led1"] == 1:
+        tcolor = (255, 255, 255)
+    if "b_led1" in params and params["b_led1"] == 0:
         tcolor = (4, 33, 39)
 
     if "b_led2" in params and params["b_led2"] == 1:

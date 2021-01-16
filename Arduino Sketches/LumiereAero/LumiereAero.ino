@@ -16,7 +16,7 @@ WiFiServer wifiServer(80);
 WiFiClient client;
 
 int show_size = 0;
-String show_elements[1000];
+String show_elements[1300];
 int next_show_elem_time = 0;
 int next_show_elem_index = 0;
 int show_start_time = 0;
@@ -216,7 +216,6 @@ void loop() {
 
                 DynamicJsonDocument doc(1024);
                 deserializeJson(doc, res);
-                Serial.println("r1");
 
                 // Команды
                 if (doc.containsKey("mp")) {
@@ -230,18 +229,12 @@ void loop() {
                         Serial.println(next_show_elem_time + show_start_time);
                     }
                 }
-                Serial.println("r2");
-                Serial.println(doc.containsKey("mp"));
-
-
 
                 // Загрузка шоу на аэростат
                 if (doc.containsKey("ss")) {
                     show_size = doc["ss"];
                     Serial.println("SETTED SHOW SIZE");
                 }
-                Serial.println("r3");
-                Serial.println(doc.containsKey("ss"));
 
                 if (doc.containsKey("se")) {
                     int element_index = doc["ei"];
@@ -250,10 +243,6 @@ void loop() {
                     Serial.println(String(element_index));
                     Serial.println(String(new_show_element));
                 }
-                Serial.println("r4");
-                Serial.println(doc.containsKey("se"));
-
-
 
                 if (doc.containsKey("rs")) {
                   Serial.println("start");
@@ -269,23 +258,21 @@ void loop() {
                     }
 
                 }
-                Serial.println("r5");
-                Serial.println(doc.containsKey("rs"));
 
                 // Динамическое управление
                 if (doc.containsKey("b_led1")) {
                     if (doc["b_led1"] == 1){
-                        built_in_led1_is_on = false;
-                    } else {
                         built_in_led1_is_on = true;
+                    } else {
+                        built_in_led1_is_on = false;
                     }
                 }
 
                 if (doc.containsKey("b_led2")) {
                     if (doc["b_led2"] == 1){
-                        built_in_led2_is_on = false;
-                    } else {
                         built_in_led2_is_on = true;
+                    } else {
+                        built_in_led2_is_on = false;
                     }
                 }
                 res = "";
