@@ -54,7 +54,7 @@ for line in commands:
             command = "-".join(line[1:])
         else:
             command = line[1]
-        drone_mdg = {"se": {"cd": json.loads(command), "t": int(time)}, "ei": x}
+        drone_mdg = {"se": json.dumps({"cd": json.loads(command), "t": int(time)}), "ei": x}
         print(drone_mdg)
         send_socket_message(CHOSEN_DRONE_IP, json.dumps(drone_mdg))
         x += 1

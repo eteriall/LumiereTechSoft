@@ -16,7 +16,7 @@ WiFiServer wifiServer(80);
 WiFiClient client;
 
 int show_size = 0;
-DynamicJsonDocument show_elements(102400);
+String show_elements[1000];
 int next_show_elem_time = 0;
 int next_show_elem_index = 0;
 int show_start_time = 0;
@@ -26,10 +26,22 @@ long timing = 0;
 
 void next_show_elem(){
     if (next_show_elem_index < show_size){
+
         Serial.println(next_show_elem_index);
-        Serial.println(show_elements.containsKey(String(next_show_elem_index)));
-        DynamicJsonDocument show_elem = show_elements[String(next_show_elem_index)];
-        DynamicJsonDocument current_command = show_elem["cd"];
+
+        // Получаем элемент  '{'cd':"...", "t":123}'
+        String show_elem = show_elements[next_show_elem_index];
+
+        // Дешифруем элемент  {'cd':"...", "t":123}
+        DynamicJsonDocument current_element(1024);
+        deserializeJson(current_element, show_elem);
+
+        // Получаем команду  "{"b_led2": 0}"
+        String current_command_json_string = current_element["cd"];
+
+        // Дешифруем команду  {"b_led2": 0}
+        DynamicJsonDocument current_command(1024);
+        deserializeJson(current_command, current_command_json_string);
 
         if (current_command.containsKey("b_led1")) {
             if (current_command["b_led1"] == 1){
@@ -54,11 +66,17 @@ void next_show_elem(){
         if(next_show_elem_index + 1 < show_size){
             next_show_elem_index += 1;
 
-            // Расшифровка следующего элемента для получения времени события
-            next_show_elem_time = show_elements[String(next_show_elem_index)]["t"];
+            // Получаем следующий элемент '{'cd':"...", "t":125}'
+            String next_show_elem_json_string = show_elements[next_show_elem_index];
+
+            // Дешифруем следующий элемент  {'cd':"...", "t":125}
+            DynamicJsonDocument next_show_elem(1024);
+            deserializeJson(next_show_elem, next_show_elem_json_string);
+
+            next_show_elem_time = next_show_elem["t"];
+
             Serial.println(String(next_show_elem_time));
             Serial.println("passed 2");
-            Serial.println(String(next_show_elem_time));
         } else {
             run_show = false;
         }
@@ -227,9 +245,10 @@ void loop() {
 
                 if (doc.containsKey("se")) {
                     int element_index = doc["ei"];
-                    DynamicJsonDocument new_show_element = doc["se"];
-                    show_elements[String(element_index)] = new_show_element;
+                    String new_show_element = doc["se"];
+                    show_elements[element_index] = new_show_element;
                     Serial.println(String(element_index));
+                    Serial.println(String(new_show_element));
                 }
                 Serial.println("r4");
                 Serial.println(doc.containsKey("se"));
