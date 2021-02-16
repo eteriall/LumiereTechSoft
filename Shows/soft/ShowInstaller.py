@@ -52,14 +52,14 @@ l = False
 commands = commands[:500] if len(commands) > 500 else commands
 for line in commands:
     print(f"{x + 1} из {len(commands)} загружено")
-    """if x > 200 and not l:
-        send_socket_message("192.168.1.9", json.dumps({"rs": 1}))
+    if x > 100 and not l:
+        send_socket_message(CHOSEN_DRONE_IP, json.dumps({"rs": 1}))
         pygame.init()
         pygame.mixer.init()
         pygame.mixer.music.load(music)
         pygame.mixer.music.play(-1)
         screen = pygame.display.set_mode((100, 100))
-        l = True"""
+        l = True
     try:
         time = line[0]
         if len(line[1:]) > 1:
