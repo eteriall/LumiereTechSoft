@@ -5,10 +5,12 @@
   <body>
     {% for drone in drones %}
     <b>{{drone.mac_address}}</b>
+    <b>{{drone.ip}}</b>
     <p>{{drone.last_ping_time}}</p>
-    <p><a href={{"command?mac_address=" ~ drone.mac_address ~ "&command=ea"}}>Enable all</a></p>
-    <p><a href={{"command?mac_address=" ~ drone.mac_address ~ "&command=da"}}>Disable all</a></p>
-
+    <p><a href={{"command?mac_address=" ~ drone.mac_address ~ "&command={'mp':1}"}}>Manual ping</a></p>
+    <p><a href={{"command?mac_address=" ~ drone.mac_address ~ "&command={'mp':1}'"}}>Auto ping</a></p>
+    <p><a href={{"command?mac_address=" ~ drone.mac_address ~ "&command={'rs':1}'"}}>Start show</a></p>
+    <p><a href={{"command?mac_address=" ~ drone.mac_address ~ "&command={'rs':0}'"}}>Stop show</a></p>
     {% endfor %}
   </body>
 </html>

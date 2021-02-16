@@ -5,7 +5,7 @@
 #define  engine1_port D0
 
 String unique_key = "XtVT7Fy8jQ";
-String HOST = "http://192.168.1.3:8090";
+String HOST = "http://192.168.1.10:8090";
 bool CONNECTED_TO_SERVER = false;
 bool built_in_led1_is_on = false;
 bool built_in_led2_is_on = false;

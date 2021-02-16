@@ -136,11 +136,11 @@ def connect_drone():
 def command_handler():
     args = dict(request.args)
     if "mac_address" not in args or args["mac_address"] not in drones:
-        return "Wrong MAC Address"
+        return f"Wrong MAC Address - {args}"
     mac = args["mac_address"]
     command = args["command"]
     completed = send_socket_message(mac, command)
-    return redirect(url_for('drones')) if completed else "Failed to send command"
+    return redirect(url_for('drones_viewer')) if completed else "Failed to send command"
 
 
 @app.route('/drones')
